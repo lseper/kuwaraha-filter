@@ -2,6 +2,7 @@ import cv2
 from pykuwahara import kuwahara
 from typing import Literal
 import numpy as np
+import os
 
 def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian']='mean', radius: int=3) -> None:
     """
@@ -17,21 +18,28 @@ def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian']='mean', 
     """
     image = cv2.imread(img_path)
     filter_applied = kuwahara(image, method=method, radius=radius)
+    examples_dir = 'examples/'
+    if not (os.path.exists(examples_dir)):
+        os.mkdir(examples_dir)
     cv2.imwrite(f'./examples/{img_path}_kuwahara_{method}_r{radius}.jpg', filter_applied)
     print(f'successfully applied kuwahara of method: {method} with kernel radius {radius}')
 
 if __name__ == '__main__':
-    # various radius - mean
-    library_kuwahara('./me-lol.jpg', radius=1)
-    library_kuwahara('./me-lol.jpg', radius=2)
-    library_kuwahara('./me-lol.jpg', radius=5)
-    library_kuwahara('./me-lol.jpg', radius=10)
-    library_kuwahara('./me-lol.jpg', radius=20)
+    example_imgs = ['me-lol.jpg', 'turing-test.jpg']
 
-    # various radius - gaussian
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=1)
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=2)
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=5)
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=10)
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=20)
-    library_kuwahara('./me-lol.jpg', method='gaussian', radius=50)
+    for img_path in example_imgs:
+        # various radius - mean
+        library_kuwahara(img_path, radius=2)
+        library_kuwahara(img_path, radius=5)
+        library_kuwahara(img_path, radius=10)
+        library_kuwahara(img_path, radius=20)
+        library_kuwahara(img_path, radius=50)
+        library_kuwahara(img_path, radius=100)
+
+        # various radius - gaussian
+        library_kuwahara(img_path, method='gaussian', radius=2)
+        library_kuwahara(img_path, method='gaussian', radius=5)
+        library_kuwahara(img_path, method='gaussian', radius=10)
+        library_kuwahara(img_path, method='gaussian', radius=20)
+        library_kuwahara(img_path, method='gaussian', radius=50)
+        library_kuwahara(img_path, method='gaussian', radius=100)
