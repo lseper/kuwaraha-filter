@@ -25,11 +25,11 @@ def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian']='mean', 
     print(f'successfully applied kuwahara of method: {method} with kernel radius {radius}')
 
 if __name__ == '__main__':
-    example_imgs = ['me-lol.jpg', 'turing-test.jpg']
+    example_imgs = ['me-lol.jpg', 'turing-test.jpg', 'cherry-blossoms.JPG', 'grassy-field.JPG']
 
     for img_path in example_imgs:
         # various radius - mean
-        library_kuwahara(img_path, radius=2)
+        library_kuwahara(img_path)
         library_kuwahara(img_path, radius=5)
         library_kuwahara(img_path, radius=10)
         library_kuwahara(img_path, radius=20)
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         library_kuwahara(img_path, radius=100)
 
         # various radius - gaussian
-        library_kuwahara(img_path, method='gaussian', radius=2)
+        library_kuwahara(img_path, method='gaussian')
         library_kuwahara(img_path, method='gaussian', radius=5)
         library_kuwahara(img_path, method='gaussian', radius=10)
         library_kuwahara(img_path, method='gaussian', radius=20)
