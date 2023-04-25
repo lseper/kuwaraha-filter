@@ -1,1 +1,4 @@
-examples/*
+examples
+lib
+bin
+pyvenv.cfg

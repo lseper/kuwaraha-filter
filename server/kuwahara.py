@@ -4,6 +4,7 @@ from typing import Literal
 import numpy as np
 import os
 import math
+import time
 
 
 def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian', 'lagrange'] = 'mean', radius: int = 3) -> None:
@@ -72,6 +73,7 @@ def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.
     if method == 'mean':
         kxy = np.ones(radius + 1, dtype=image.dtype) / (radius + 1)  # kernelX and kernelY (same)
     elif method == 'gaussian':
+        # kxy = np.array(_calculate_gaussian_true_values(2 * radius + 1))
         kxy = cv2.getGaussianKernel(2 * radius + 1, sigma, ktype=cv2.CV_32F)
         kxy /= kxy[radius:].sum()  # normalize the semi-kernels
         klr = np.array([kxy[:radius + 1], kxy[radius:]])
@@ -138,10 +140,19 @@ def lagrange(X, f_x, x_estimate):
     return curr
 
 
+def get_lagrange_function(X, f_x):
+  def est(x):
+    curr = 0
+    for i in range(0, len(X)):
+      curr += (_lx(X, i)(x) * f_x[i])
+    return curr
+
+  return est
+
+
 # f(x) function
-def gaussian_func(k_size, i):
-    sigma = -1  # 0.3 * ((k_size - 1) * 0.5 - 1) + 0.8
-    inner = math.pow( (i-(k_size - 1) ) / 2, 2) / (2 * math.pow(sigma, 2))
+def gaussian_func(x, sigma=1):
+    inner = math.pow(x, 2) / (2 * math.pow(sigma, 2))
     test = math.exp(-1 * inner)
     return test
     #return math.exp((-1 * (math.pow((i-(k_size - 1) ) / 2.0, 2), 2)) / (2 * math.pow(sigma, 2)))
@@ -149,35 +160,51 @@ def gaussian_func(k_size, i):
 
 # calculate the true gaussian values
 def _calculate_gaussian_true_values(k_size):
+    sigma = 0.3 * ((k_size - 1) * 0.5 - 1) + 0.8
     y_vals = []
-    for i in range(k_size - 1):
-        y_vals.append(gaussian_func(k_size, i))
+    for i in range(k_size):
+        y_vals.append(gaussian_func(i - (k_size - 1) / 2, sigma))
 
-    return y_vals
+    total = sum(y_vals)
+    return [y / total for y in y_vals]
 
 
 # calculate the lagrange estimated values
 def calculate_lagrange_est_values(k_size):
-    y_vals = _calculate_gaussian_true_values(k_size)
-    x_vals = list(range(0, k_size - 1))
+    # setup, get lagrange data (5 points)
+    sigma = 0.3 * ((k_size - 1) * 0.5 - 1) + 0.8
+    start = (k_size - 1) // 2
+    x_vals = [start, 3 * start / 4, start / 2, start / 4, 0]
+    y_vals = [gaussian_func(x, sigma) for x in x_vals]
+
+    # actually estimate the values
     lagrange_estimate = []
-    for x in range(k_size - 1):
-        lagrange_estimate.append(lagrange(x_vals, y_vals, x))
+    est_func = get_lagrange_function(x_vals, y_vals)
+    for x in range((k_size - 1) // 2, -1, -1):
+      lagrange_estimate.append(est_func(x))
+    
+    # normalize the data
+    final = np.concatenate((lagrange_estimate, lagrange_estimate[::-1][1:]))
+    tot = sum(final)
+    final = [x / tot for x in final]
 
-    # convert to a 6 x 1 column matrix (HAVE WRONG DIMS -- OTHER IS 7 X 1)
-    col_vec = np.reshape(lagrange_estimate, (-1, 1))
-
-    return col_vec
+    return np.array(final)
 
 
 # test
 def test():
     # f(x) = 1/x at x0 = 2, x1 = 2.75, and x2 = 4
-    x_vals = [2, 2.75, 4]
+    x_vals = [2, 1, 0]
     y_vals = []
     lagrange_estimate = []
-    for x in x_vals:
-        y_vals.append(1 / x)
+    sigma = 0.3 * ((5 - 1) * 0.5 - 1) + 0.8
+    for i in range(len(x_vals)):
+      y_vals.append(gaussian_func(i - (5 - 1) / 2, sigma))
+
+    y_vals.append(y_vals[1])
+    y_vals.append(y_vals[0])
+    sum_vals = sum(y_vals)
+    y_vals = [y / sum_vals for y in y_vals]
 
     for x in x_vals:
         # x = list of x values to interpolate over
@@ -185,12 +212,15 @@ def test():
         # x_estimate = use lagrange to estimate at x
         lagrange_estimate.append(lagrange(x_vals, y_vals, x))
 
-    print(lagrange_estimate)
+    # print(lagrange_estimate)
+    # print(y_vals)
+    print(_calculate_gaussian_true_values(9))
+    print(calculate_lagrange_est_values(9))
 
 
 if __name__ == '__main__':
     example_imgs = ['me-lol.jpg', 'turing-test.jpg', 'cherry-blossoms.JPG', 'grassy-field.JPG']
-
+    # test()
     for img_path in example_imgs:
         # various radius - mean
         # library_kuwahara(img_path)
@@ -209,11 +239,23 @@ if __name__ == '__main__':
         # library_kuwahara(img_path, method='gaussian', radius=100)
 
         # various radius - lagrange
-        library_kuwahara(img_path, method='lagrange')
-        library_kuwahara(img_path, method='lagrange', radius=5)
-        library_kuwahara(img_path, method='lagrange', radius=10)
-        library_kuwahara(img_path, method='lagrange', radius=20)
-        library_kuwahara(img_path, method='lagrange', radius=50)
+        # library_kuwahara(img_path, method='gaussian')
+        # library_kuwahara(img_path, method='lagrange')
+        # library_kuwahara(img_path, method='gaussian', radius=5)
+        # library_kuwahara(img_path, method='lagrange', radius=5)
+        # library_kuwahara(img_path, method='gaussian', radius=10)
+        # library_kuwahara(img_path, method='lagrange', radius=10)
+        # library_kuwahara(img_path, method='gaussian', radius=20)
+        # library_kuwahara(img_path, method='lagrange', radius=20)
+        # library_kuwahara(img_path, method='gaussian', radius=50)
+        # library_kuwahara(img_path, method='lagrange', radius=50)
+        then = time.time()
+        library_kuwahara(img_path, method='gaussian', radius=100)
+        now = time.time()
+        print(now - then)
+        then = time.time()
         library_kuwahara(img_path, method='lagrange', radius=100)
+        now = time.time()
+        print(now - then)
         break
 
