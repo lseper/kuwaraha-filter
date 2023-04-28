@@ -5,6 +5,7 @@ import numpy as np
 import os
 import math
 import time
+import matplotlib.pyplot as plt
 
 
 def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian', 'lagrange'] = 'mean', radius: int = 3) -> None:
@@ -117,6 +118,21 @@ def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.
     return filtered.astype(orig_img.dtype)
 
 
+def calculate_error(radius):
+    sigma = -1
+    k_size = 2 * radius + 1
+    kxy = cv2.getGaussianKernel(2 * radius + 1, sigma, ktype=cv2.CV_32F)
+    kxy /= kxy[radius:].sum()  # normalize the semi-kernels
+
+    kxy2 = calculate_lagrange_est_values(k_size)
+    kxy2 /= kxy2[radius:].sum()  # normalize the semi-kernels
+
+    c = [abs(i - j) / i * 100 if i != 0 else None for i, j in zip(kxy, kxy2)]
+    for error in c:
+        print(error)
+
+
+
 def _lx(X, i):
     xk = X[i]
 
@@ -182,7 +198,7 @@ def calculate_lagrange_est_values(k_size):
     est_func = get_lagrange_function(x_vals, y_vals)
     for x in range((k_size - 1) // 2, -1, -1):
       lagrange_estimate.append(est_func(x))
-    
+
     # normalize the data
     final = np.concatenate((lagrange_estimate, lagrange_estimate[::-1][1:]))
     tot = sum(final)
@@ -218,10 +234,39 @@ def test():
     print(calculate_lagrange_est_values(9))
 
 
+def add_point_lagrange(x_radius_lagrange, y_time_lagrange, radius):
+    then = time.time()
+    library_kuwahara(img_path, method='lagrange', radius=radius)
+    x_radius_lagrange.append(radius)
+    now = time.time()
+    print(now - then)
+    y_time_lagrange.append(now - then)
+
+
+def add_point_gausian(x_radius_gaussian, y_time_gaussian, radius):
+    then = time.time()
+    library_kuwahara(img_path, method='gaussian', radius=radius)
+    x_radius_gaussian.append(radius)
+    now = time.time()
+    print(now - then)
+    y_time_gaussian.append(now - then)
+
+
 if __name__ == '__main__':
     example_imgs = ['me-lol.jpg', 'turing-test.jpg', 'cherry-blossoms.JPG', 'grassy-field.JPG']
+    example_imgs_str = ['me_lol', 'turing_test', 'cherry_blossoms', 'grassy_field']
+    i = 0
+
+    # WIP:
+    # calculate_error(100)
+
     # test()
     for img_path in example_imgs:
+        x_radius_lagrange = []
+        x_radius_gaussian = []
+        y_time_lagrange = []
+        y_time_gaussian = []
+
         # various radius - mean
         # library_kuwahara(img_path)
         # library_kuwahara(img_path, radius=5)
@@ -239,7 +284,6 @@ if __name__ == '__main__':
         # library_kuwahara(img_path, method='gaussian', radius=100)
 
         # various radius - lagrange
-        # library_kuwahara(img_path, method='gaussian')
         # library_kuwahara(img_path, method='lagrange')
         # library_kuwahara(img_path, method='gaussian', radius=5)
         # library_kuwahara(img_path, method='lagrange', radius=5)
@@ -249,13 +293,39 @@ if __name__ == '__main__':
         # library_kuwahara(img_path, method='lagrange', radius=20)
         # library_kuwahara(img_path, method='gaussian', radius=50)
         # library_kuwahara(img_path, method='lagrange', radius=50)
-        then = time.time()
-        library_kuwahara(img_path, method='gaussian', radius=100)
-        now = time.time()
-        print(now - then)
-        then = time.time()
-        library_kuwahara(img_path, method='lagrange', radius=100)
-        now = time.time()
-        print(now - then)
-        break
 
+        #then = time.time()
+        #library_kuwahara(img_path, method='gaussian', radius=100)
+        #x_radius_gaussian.append(100)
+        #now = time.time()
+        #print(now - then)
+        #y_time_gaussian.append(now - then)
+        add_point_gausian(x_radius_gaussian, y_time_gaussian, 5)
+        add_point_gausian(x_radius_gaussian, y_time_gaussian, 10)
+        add_point_gausian(x_radius_gaussian, y_time_gaussian, 20)
+        add_point_gausian(x_radius_gaussian, y_time_gaussian, 50)
+        add_point_gausian(x_radius_gaussian, y_time_gaussian, 100)
+
+        #then = time.time()
+        #library_kuwahara(img_path, method='lagrange', radius=100)
+        #x_radius_lagrange.append(100)
+        #now = time.time()
+        #print(now - then)
+        #y_time_lagrange.append(now - then)
+        add_point_lagrange(x_radius_lagrange, y_time_lagrange, 5)
+        add_point_lagrange(x_radius_lagrange, y_time_lagrange, 10)
+        add_point_lagrange(x_radius_lagrange, y_time_lagrange, 20)
+        add_point_lagrange(x_radius_lagrange, y_time_lagrange, 50)
+        add_point_lagrange(x_radius_lagrange, y_time_lagrange, 100)
+
+        if i != 0:
+            plt.clf()
+
+        plt.plot(x_radius_lagrange, y_time_lagrange, '-*', label='Lagrange Interpolation')
+        plt.plot(x_radius_gaussian, y_time_gaussian, '-*', label='Gaussian')
+        plt.xlabel("Radius")
+        plt.ylabel("Time (seconds)")
+        plt.legend()
+        plt.title("Lagrange Interpolation vs Gaussian Weights for the " + example_imgs_str[i] + " Image")
+        plt.savefig("figures/" + example_imgs_str[i] + "_Image.jpg")
+        i += 1
