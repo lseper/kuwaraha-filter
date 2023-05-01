@@ -14,7 +14,14 @@ function UploadCard() {
 		undefined
 	);
 
+	const [returnedFile, setReturnedFile] = useState<File | undefined>(
+		undefined
+	);
+
+	const [kernelSize, setKernelSize] = useState(20);
+
 	const [previewURL, setPreviewURL] = useState<string | undefined>(undefined);
+	const [outputURL, setOutputURL] = useState<string | undefined>(undefined);
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files && event.target.files[0];
@@ -31,17 +38,35 @@ function UploadCard() {
 		}
 	};
 
-	const handleUpload = () => {
+	const handleUpload = async () => {
 		if (selectedFile) {
 			const formData = new FormData();
-			formData.append("file", selectedFile);
+			formData.append("file", selectedFile, selectedFile.name);
+			formData.append("kernel", `${kernelSize}`);
+			const res = await fetch("http://127.0.0.1:5000/filter", {
+				method: "POST",
+				body: formData,
+				mode: "cors",
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+				},
+			});
 
-			// fetch("https://my-server", {
-			// 	method: "POST",
-			// 	body: formData,
-			// });
-
-			console.log(formData);
+			console.log("AFTER RESPONSE");
+			if (res.ok) {
+				console.log("ASFDHISADHNFGADSF");
+				// const form = await res.formData();
+				const img = await res.blob();
+				if (img) {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						if (typeof e.target?.result === "string") {
+							setOutputURL(e.target.result);
+						}
+					};
+					reader.readAsDataURL(img);
+				}
+			}
 		}
 	};
 
@@ -79,6 +104,7 @@ function UploadCard() {
 								type="file"
 								accept=".png, .PNG, .jpeg, .jpg, .JPG, .JPEG"
 								hidden
+								name="file"
 								onChange={handleFileChange}
 							/>
 						</Button>
@@ -87,8 +113,14 @@ function UploadCard() {
 							aria-label="Kernel Size"
 							defaultValue={20}
 							valueLabelDisplay="auto"
+							value={kernelSize}
 							step={2}
 							min={2}
+							onChange={(e, nv) =>
+								setKernelSize(
+									typeof nv === "number" ? nv : nv[0]
+								)
+							}
 							max={100}
 						/>
 					</Stack>
@@ -110,7 +142,12 @@ function UploadCard() {
 					</Button>
 				</CardActions>
 			</Card>
-			{previewURL && <BeforeAndAfterImages beforeImageUrl={previewURL} />}
+			{previewURL && (
+				<BeforeAndAfterImages
+					beforeImageUrl={previewURL}
+					afterImageUrl={outputURL}
+				/>
+			)}
 		</Container>
 	);
 }

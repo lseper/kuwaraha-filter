@@ -8,9 +8,9 @@ import time
 import matplotlib.pyplot as plt
 
 
-def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian', 'lagrange'] = 'mean', radius: int = 3) -> None:
+def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian', 'lagrange'] = 'mean', radius: int = 3, dir='api', img_name="output") -> None:
     """
-    
+
     This method simply calls the kuwahara function from the pykuwahara library with the given method and radius
     Should be used for testing our approximation kuwahara method
     Files are output to ./examples/
@@ -26,8 +26,12 @@ def library_kuwahara(img_path: str, method: Literal['mean', 'gaussian', 'lagrang
     examples_dir = 'examples/'
     if not (os.path.exists(examples_dir)):
         os.mkdir(examples_dir)
-    cv2.imwrite(f'./examples/{img_path}_kuwahara_{method}_r{radius}.jpg', filter_applied)
-    print(f'successfully applied kuwahara of method: {method} with kernel radius {radius}')
+    out_path = f'./{dir}/{img_name}_kuwahara.jpg'
+    cv2.imwrite(
+        out_path, filter_applied)
+    print(
+        f'successfully applied kuwahara of method: {method} with kernel radius {radius}')
+    return out_path
 
 
 def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.COLOR_BGR2GRAY, image_2d=None):
@@ -62,7 +66,8 @@ def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.
     if image.ndim == 3:
         if image_2d is None:
             # NOTE this doesn't support float64
-            image_2d = cv2.cvtColor(orig_img, grayconv).astype(image.dtype, copy=False)
+            image_2d = cv2.cvtColor(orig_img, grayconv).astype(
+                image.dtype, copy=False)
         avgs_2d = np.empty((4, *image.shape[:2]), dtype=image.dtype)
     elif image.ndim == 2:
         image_2d = image
@@ -72,7 +77,8 @@ def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.
     squared_img = image_2d ** 2
 
     if method == 'mean':
-        kxy = np.ones(radius + 1, dtype=image.dtype) / (radius + 1)  # kernelX and kernelY (same)
+        kxy = np.ones(radius + 1, dtype=image.dtype) / \
+            (radius + 1)  # kernelX and kernelY (same)
     elif method == 'gaussian':
         # kxy = np.array(_calculate_gaussian_true_values(2 * radius + 1))
         kxy = cv2.getGaussianKernel(2 * radius + 1, sigma, ktype=cv2.CV_32F)
@@ -104,16 +110,19 @@ def custom_kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.
         if image.ndim == 3:  # else, this is already done...
             cv2.sepFilter2D(image_2d, -1, kx, ky, avgs_2d[k], shift[k])
         cv2.sepFilter2D(squared_img, -1, kx, ky, stddevs[k], shift[k])
-        stddevs[k] = stddevs[k] - avgs_2d[k] ** 2  # compute the final variance on sub-window
+        # compute the final variance on sub-window
+        stddevs[k] = stddevs[k] - avgs_2d[k] ** 2
 
     # Choice of index with minimum variance
     indices = np.argmin(stddevs, axis=0)
 
     # Building the filtered image
     if image.ndim == 2:
-        filtered = np.take_along_axis(avgs, indices[None, ...], 0).reshape(image.shape)
+        filtered = np.take_along_axis(
+            avgs, indices[None, ...], 0).reshape(image.shape)
     else:  # then avgs.ndim == 4
-        filtered = np.take_along_axis(avgs, indices[None, ..., None], 0).reshape(image.shape)
+        filtered = np.take_along_axis(
+            avgs, indices[None, ..., None], 0).reshape(image.shape)
 
     return filtered.astype(orig_img.dtype)
 
@@ -130,7 +139,6 @@ def calculate_error(radius):
     c = [abs(i - j) / i * 100 if i != 0 else None for i, j in zip(kxy, kxy2)]
     for error in c:
         print(error)
-
 
 
 def _lx(X, i):
@@ -157,13 +165,13 @@ def lagrange(X, f_x, x_estimate):
 
 
 def get_lagrange_function(X, f_x):
-  def est(x):
-    curr = 0
-    for i in range(0, len(X)):
-      curr += (_lx(X, i)(x) * f_x[i])
-    return curr
+    def est(x):
+        curr = 0
+        for i in range(0, len(X)):
+            curr += (_lx(X, i)(x) * f_x[i])
+        return curr
 
-  return est
+    return est
 
 
 # f(x) function
@@ -171,7 +179,7 @@ def gaussian_func(x, sigma=1):
     inner = math.pow(x, 2) / (2 * math.pow(sigma, 2))
     test = math.exp(-1 * inner)
     return test
-    #return math.exp((-1 * (math.pow((i-(k_size - 1) ) / 2.0, 2), 2)) / (2 * math.pow(sigma, 2)))
+    # return math.exp((-1 * (math.pow((i-(k_size - 1) ) / 2.0, 2), 2)) / (2 * math.pow(sigma, 2)))
 
 
 # calculate the true gaussian values
@@ -197,7 +205,7 @@ def calculate_lagrange_est_values(k_size):
     lagrange_estimate = []
     est_func = get_lagrange_function(x_vals, y_vals)
     for x in range((k_size - 1) // 2, -1, -1):
-      lagrange_estimate.append(est_func(x))
+        lagrange_estimate.append(est_func(x))
 
     # normalize the data
     final = np.concatenate((lagrange_estimate, lagrange_estimate[::-1][1:]))
@@ -215,7 +223,7 @@ def test():
     lagrange_estimate = []
     sigma = 0.3 * ((5 - 1) * 0.5 - 1) + 0.8
     for i in range(len(x_vals)):
-      y_vals.append(gaussian_func(i - (5 - 1) / 2, sigma))
+        y_vals.append(gaussian_func(i - (5 - 1) / 2, sigma))
 
     y_vals.append(y_vals[1])
     y_vals.append(y_vals[0])
@@ -253,8 +261,10 @@ def add_point_gausian(x_radius_gaussian, y_time_gaussian, radius):
 
 
 if __name__ == '__main__':
-    example_imgs = ['me-lol.jpg', 'turing-test.jpg', 'cherry-blossoms.JPG', 'grassy-field.JPG']
-    example_imgs_str = ['me_lol', 'turing_test', 'cherry_blossoms', 'grassy_field']
+    example_imgs = ['me-lol.jpg', 'turing-test.jpg',
+                    'cherry-blossoms.JPG', 'grassy-field.JPG']
+    example_imgs_str = ['me_lol', 'turing_test',
+                        'cherry_blossoms', 'grassy_field']
     i = 0
 
     # WIP:
@@ -294,24 +304,24 @@ if __name__ == '__main__':
         # library_kuwahara(img_path, method='gaussian', radius=50)
         # library_kuwahara(img_path, method='lagrange', radius=50)
 
-        #then = time.time()
-        #library_kuwahara(img_path, method='gaussian', radius=100)
-        #x_radius_gaussian.append(100)
-        #now = time.time()
-        #print(now - then)
-        #y_time_gaussian.append(now - then)
+        # then = time.time()
+        # library_kuwahara(img_path, method='gaussian', radius=100)
+        # x_radius_gaussian.append(100)
+        # now = time.time()
+        # print(now - then)
+        # y_time_gaussian.append(now - then)
         add_point_gausian(x_radius_gaussian, y_time_gaussian, 5)
         add_point_gausian(x_radius_gaussian, y_time_gaussian, 10)
         add_point_gausian(x_radius_gaussian, y_time_gaussian, 20)
         add_point_gausian(x_radius_gaussian, y_time_gaussian, 50)
         add_point_gausian(x_radius_gaussian, y_time_gaussian, 100)
 
-        #then = time.time()
-        #library_kuwahara(img_path, method='lagrange', radius=100)
-        #x_radius_lagrange.append(100)
-        #now = time.time()
-        #print(now - then)
-        #y_time_lagrange.append(now - then)
+        # then = time.time()
+        # library_kuwahara(img_path, method='lagrange', radius=100)
+        # x_radius_lagrange.append(100)
+        # now = time.time()
+        # print(now - then)
+        # y_time_lagrange.append(now - then)
         add_point_lagrange(x_radius_lagrange, y_time_lagrange, 5)
         add_point_lagrange(x_radius_lagrange, y_time_lagrange, 10)
         add_point_lagrange(x_radius_lagrange, y_time_lagrange, 20)
@@ -321,11 +331,13 @@ if __name__ == '__main__':
         if i != 0:
             plt.clf()
 
-        plt.plot(x_radius_lagrange, y_time_lagrange, '-*', label='Lagrange Interpolation')
+        plt.plot(x_radius_lagrange, y_time_lagrange,
+                 '-*', label='Lagrange Interpolation')
         plt.plot(x_radius_gaussian, y_time_gaussian, '-*', label='Gaussian')
         plt.xlabel("Radius")
         plt.ylabel("Time (seconds)")
         plt.legend()
-        plt.title("Lagrange Interpolation vs Gaussian Weights for the " + example_imgs_str[i] + " Image")
+        plt.title("Lagrange Interpolation vs Gaussian Weights for the " +
+                  example_imgs_str[i] + " Image")
         plt.savefig("figures/" + example_imgs_str[i] + "_Image.jpg")
         i += 1
