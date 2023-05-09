@@ -25,10 +25,11 @@ The client is now running. We can now start the server.
 ### Server
 
 - `cd` into the `server/` directory.
-- Run `python3 -m venv`
+- Run `python3 -m venv`. This creates a virtual environment where we can install the necessary packages!
 - Depending on your operating system, do one of two things:
   - Windows: Run `venv/scripts/activate.bat` from `cmd` or `venv/scripts/activate.ps1` from `powershell`.
   - Linux/MacOS: Run `source venv/scripts/activate`.
+  - For more information on `venv`, see [here](https://docs.python.org/3/library/venv.html)
 - Run `pip install -r requirements.txt`
 - Run `python3 ./server`
 
