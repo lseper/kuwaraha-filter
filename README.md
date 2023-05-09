@@ -34,3 +34,5 @@ The client is now running. We can now start the server.
 - Run `python3 ./server`
 
 The server is now running as well. You should be able to interact with the web interface!
+
+When you are done interacting with the server, run `deactivate` within the terminal.
